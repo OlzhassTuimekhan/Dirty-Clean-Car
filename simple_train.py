@@ -9,10 +9,10 @@ from ultralytics import YOLO
 
 def main():
     # Настройки
-    data_path = "../dataset"
-    model_size = "s"  # yolov8n - самая быстрая
+    data_path = "dataset"
+    model_size = "s"  # yolov8s - как в логах
     epochs = 50       # меньше эпох для быстрого теста
-    device = "1"      # GPU 0 (после CUDA_VISIBLE_DEVICES=1)
+    device = "0"      # GPU 0 (после CUDA_VISIBLE_DEVICES=1)
     
     print(f"🚀 Начинаем обучение YOLOv8{model_size}")
     print(f"📁 Данные: {data_path}")
@@ -21,8 +21,20 @@ def main():
     
     # Проверяем данные
     if not os.path.exists(data_path):
-        print("❌ Данные не найдены! Конвертируем...")
-        os.system("cd ../dataset_raw && python convert_yolo_to_classification.py --input dataset_raw --output data_cars_converted")
+        print("❌ Данные не найдены!")
+        return
+    
+    # Проверяем структуру (clean и dirty папки)
+    clean_path = os.path.join(data_path, "clean")
+    dirty_path = os.path.join(data_path, "dirty")
+    
+    if not os.path.exists(clean_path) or not os.path.exists(dirty_path):
+        print("❌ Неправильная структура данных! Нужны папки clean/ и dirty/")
+        return
+    
+    clean_count = len(os.listdir(clean_path))
+    dirty_count = len(os.listdir(dirty_path))
+    print(f"📊 Clean: {clean_count}, Dirty: {dirty_count}")
     
     # Загружаем модель
     model = YOLO(f"yolov8{model_size}-cls.pt")
