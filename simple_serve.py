@@ -31,10 +31,11 @@ def load_model():
     """Загружаем обученную YOLO модель"""
     global model
     
-    # Пути к модели
+    # Пути к модели (в порядке приоритета)
     model_paths = [
-        "trained_models/dirty_car_yolo.pt",
+        "runs/classify/dirty_car_simple2/weights/best.pt",  # новая обученная модель
         "runs/classify/dirty_car_simple/weights/best.pt",
+        "trained_models/dirty_car_yolo.pt",
         "artifacts/best.pt"
     ]
     
@@ -59,6 +60,8 @@ def predict_image(image_bytes):
         raise ValueError("Не удалось декодировать изображение")
     
     # Предсказание YOLO
+    if model is None:
+        raise ValueError("Модель не загружена")
     results = model(image, verbose=False)
     
     # Извлекаем результат
@@ -113,7 +116,7 @@ async def predict(file: UploadFile = File(...)):
     Загружаешь фото -> получаешь ответ
     """
     # Проверяем тип файла
-    if not file.content_type.startswith('image/'):
+    if not file.content_type or not file.content_type.startswith('image/'):
         raise HTTPException(status_code=400, detail="Файл должен быть изображением")
     
     try:

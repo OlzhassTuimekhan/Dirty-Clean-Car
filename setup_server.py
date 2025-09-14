@@ -32,8 +32,9 @@ def install_dependencies():
 def check_model():
     """Проверяет наличие обученной модели"""
     model_paths = [
-        "trained_models/dirty_car_yolo.pt",
+        "runs/classify/dirty_car_simple2/weights/best.pt",  # новая обученная модель
         "runs/classify/dirty_car_simple/weights/best.pt",
+        "trained_models/dirty_car_yolo.pt",
         "artifacts/best.pt"
     ]
     

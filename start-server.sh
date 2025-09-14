@@ -3,8 +3,14 @@
 
 echo "🚀 Запускаем DirtyCar API сервер..."
 
-# Проверяем модель
-if [ ! -f "trained_models/dirty_car_yolo.pt" ] && [ ! -d "runs/classify" ]; then
+# Проверяем модель (в порядке приоритета)
+if [ -f "runs/classify/dirty_car_simple2/weights/best.pt" ]; then
+    echo "✅ Найдена новая модель: runs/classify/dirty_car_simple2/weights/best.pt"
+elif [ -f "runs/classify/dirty_car_simple/weights/best.pt" ]; then
+    echo "✅ Найдена модель: runs/classify/dirty_car_simple/weights/best.pt"
+elif [ -f "trained_models/dirty_car_yolo.pt" ]; then
+    echo "✅ Найдена модель: trained_models/dirty_car_yolo.pt"
+else
     echo "❌ Модель не найдена! Сначала обучите модель:"
     echo "   python simple_train.py"
     exit 1
