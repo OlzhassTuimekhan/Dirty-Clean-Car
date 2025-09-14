@@ -1,0 +1,75 @@
+# Training configuration for DirtyCar binary classification
+
+# Data configuration
+data_root: "./data_cars"
+img_size: 256
+num_classes: 2
+class_names: ["clean", "dirty"]
+
+# Training hyperparameters
+batch_size: 192  # Optimized for 2×RTX 3090 (24GB each)
+epochs: 40
+lr: 3e-4
+weight_decay: 1e-4
+scheduler: "cosine"  # "cosine" | "step" | "plateau"
+warmup_epochs: 3
+
+# Model configuration
+model: "resnet50"  # "resnet50" | "efficientnet_b0" | "convnext_tiny"
+pretrained: true
+dropout: 0.2
+
+# Loss and class balancing
+loss: "ce"  # "ce" | "focal"
+class_weights: "auto"  # [w_clean, w_dirty] | "auto" | null
+focal_alpha: 0.25  # Only used if loss == "focal"
+focal_gamma: 2.0   # Only used if loss == "focal"
+
+# Data sampling strategy for class imbalance
+sampler: "weighted"  # "weighted" | "oversample" | "none"
+oversample_ratio: 1.0  # Target ratio dirty:clean (only for oversample)
+
+# Data augmentation
+augmentation:
+  horizontal_flip: 0.5
+  rotation: 15
+  color_jitter:
+    brightness: 0.2
+    contrast: 0.2
+    saturation: 0.2
+    hue: 0.1
+  gaussian_blur: 0.1
+  normalize:
+    mean: [0.485, 0.456, 0.406]  # ImageNet
+    std: [0.229, 0.224, 0.225]
+
+# Training optimization
+amp: true  # Automatic Mixed Precision
+ddp: true  # DistributedDataParallel
+num_workers: 8
+pin_memory: true
+persistent_workers: true
+
+# Early stopping and checkpointing
+early_stopping:
+  patience: 10
+  metric: "val_macro_f1"  # "val_loss" | "val_macro_f1" | "val_accuracy"
+  mode: "max"  # "min" for loss, "max" for metrics
+
+# Logging and monitoring
+log_interval: 50  # Log every N batches
+save_top_k: 3
+monitor_metric: "val_macro_f1"
+
+# Validation and testing
+val_check_interval: 1.0  # Check validation every epoch
+test_after_training: true
+
+# Temperature calibration (optional)
+temperature_scaling: true
+calibration_bins: 15
+
+# Paths
+checkpoint_dir: "./artifacts"
+log_dir: "./logs"
+tensorboard_dir: "./runs"

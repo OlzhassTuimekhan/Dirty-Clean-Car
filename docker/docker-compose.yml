@@ -1,0 +1,92 @@
+version: '3.8'
+
+services:
+  dirtycar-api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: dirtycar-classifier
+    restart: unless-stopped
+    
+    # GPU support - choose one based on your Docker Compose version
+    # For newer Docker Compose (v2.3+)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    
+    # Alternative for older Docker Compose versions
+    # runtime: nvidia
+    
+    environment:
+      - MODEL_PATH=/app/artifacts/best.onnx
+      - IMGSZ=256
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      # Optional threshold overrides
+      # - THRESH=0.85
+      # - T_LOW=0.3
+      # - T_HIGH=0.9
+      
+      # CUDA settings
+      - CUDA_VISIBLE_DEVICES=0
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+    
+    ports:
+      - "8000:8000"
+    
+    volumes:
+      # Mount artifacts directory (models, thresholds, etc.)
+      - ../artifacts:/app/artifacts
+      
+      # Mount data directory (optional, for batch processing)
+      - ../data_cars:/app/data_cars:ro
+      
+      # Mount logs directory
+      - ../logs:/app/logs
+      
+      # Mount any custom config files
+      - ../configs:/app/configs:ro
+    
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    
+    # Resource limits
+    mem_limit: 4g
+    memswap_limit: 4g
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Optional: Add a reverse proxy (nginx) for production
+  nginx:
+    image: nginx:alpine
+    container_name: dirtycar-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      # Add SSL certificates if needed
+      # - ./ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - dirtycar-api
+    profiles:
+      - production
+
+networks:
+  default:
+    name: dirtycar-network
