@@ -62,7 +62,7 @@ ENV API_HOST=0.0.0.0
 ENV API_PORT=8000
 
 # Expose port
-EXPOSE 8000
+EXPOSE 7439
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \

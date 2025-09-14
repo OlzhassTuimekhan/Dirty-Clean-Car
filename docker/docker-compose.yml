@@ -37,7 +37,7 @@ services:
       - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     
     ports:
-      - "8000:8000"
+      - "7439:7439"
     
     volumes:
       # Mount artifacts directory (models, thresholds, etc.)

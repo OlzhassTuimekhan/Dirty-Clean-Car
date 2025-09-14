@@ -10,7 +10,7 @@ from ultralytics import YOLO
 def main():
     # Настройки
     data_path = "../dataset"
-    model_size = "n"  # yolov8n - самая быстрая
+    model_size = "s"  # yolov8n - самая быстрая
     epochs = 50       # меньше эпох для быстрого теста
     device = "1"      # GPU 0 (после CUDA_VISIBLE_DEVICES=1)
     

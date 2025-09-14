@@ -24,21 +24,6 @@ The threshold `T_clean` is optimized on validation data to achieve target precis
 
 ### Environment Setup
 
-```bash
-# Create virtual environment
-python3 -m venv venv && source venv/bin/activate
-pip install --upgrade pip setuptools wheel
-
-# Install PyTorch with CUDA 12.1 wheels (compatible with driver 12.9)
-pip install --index-url https://download.pytorch.org/whl/cu121 \
-    torch==2.3.1 torchvision==0.18.1
-
-# Install other dependencies
-pip install -r requirements.txt
-```
-
-### Data Structure
-
 Organize your data as follows:
 ```
 data_cars/
@@ -53,7 +38,7 @@ data_cars/
     └── dirty/
 ```
 
-### Training Pipeline
+## Training Pipeline
 
 ```bash
 # Complete pipeline: train → eval → threshold → export → serve

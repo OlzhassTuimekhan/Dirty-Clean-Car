@@ -40,7 +40,7 @@ docker run --rm "$IMAGE_NAME:$TAG" python --version
 echo "Build completed successfully!"
 echo ""
 echo "To run the container:"
-echo "  docker run --gpus all -p 8000:8000 -v \$(pwd)/artifacts:/app/artifacts $IMAGE_NAME:$TAG"
+echo "  docker rcurl -f http://localhost:7439/healthz:8000 -v \$(pwd)/artifacts:/app/artifacts $IMAGE_NAME:$TAG"
 echo ""
 echo "Or use docker-compose:"
 echo "  docker-compose -f docker/docker-compose.yml up"

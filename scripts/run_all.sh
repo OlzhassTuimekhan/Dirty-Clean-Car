@@ -94,9 +94,9 @@ fi
 echo ""
 echo "Step 5/5: Starting API server..."
 echo "================================="
-echo "API will be available at: http://localhost:8000"
-echo "Documentation: http://localhost:8000/docs"
-echo "Health check: http://localhost:8000/healthz"
+echo "API will be available at: http://localhost:7439"
+echo "Documentation: http://localhost:7439/docs"
+echo "Health check: http://localhost:7439/healthz"
 echo ""
 echo "Press Ctrl+C to stop the server"
 echo ""
@@ -105,9 +105,7 @@ echo ""
 export MODEL_PATH=artifacts/best.onnx
 export IMGSZ=256
 
-python -m uvicorn src.serve:app \
-    --host 0.0.0.0 \
-    --port 8000 \
+python -m uvicorn src.serve:app --host 0.0.0.0 --port 7439 \
     --reload
 
 echo ""

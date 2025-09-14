@@ -4,7 +4,7 @@
 set -e
 
 # Configuration
-API_URL="${1:-http://localhost:8000}"
+API_URL="http://localhost:7439"
 TEST_IMAGE="${2:-}"
 
 echo "Testing DirtyCar API at: $API_URL"
