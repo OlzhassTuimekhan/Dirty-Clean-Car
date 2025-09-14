@@ -21,19 +21,21 @@ class PredictionResponse(BaseModel):
     processing_time: float  # время обработки в мс
 
 class DamageResponse(BaseModel):
-    damage_type: str    # тип повреждения
-    confidence: float   # уверенность 0-1
+    damage_results: dict    # результаты детекции повреждений
+    scratch_results: dict   # результаты детекции царапин
     processing_time: float  # время обработки в мс
-    all_detections: list  # все найденные повреждения
+    combined_detections: list  # все найденные дефекты
 
 class HealthResponse(BaseModel):
     status: str
     model_loaded: bool
     damage_model_loaded: bool
+    scratch_model_loaded: bool
 
 # Глобальные модели
 model = None  # модель clean/dirty
 damage_model = None  # модель повреждений
+scratch_model = None  # модель царапин
 
 def load_model():
     """Загружаем обученную YOLO модель для clean/dirty"""
@@ -41,9 +43,10 @@ def load_model():
     
     # Пути к модели (в порядке приоритета)
     model_paths = [
-        "runs/classify/dirty_car_simple2/weights/best.pt",  # новая обученная модель
-        "runs/classify/dirty_car_simple/weights/best.pt",
+        "trained_models/clean_dirty_best.pt",  # основная модель clean/dirty
         "trained_models/dirty_car_yolo.pt",
+        "runs/classify/dirty_car_simple2/weights/best.pt",
+        "runs/classify/dirty_car_simple/weights/best.pt",
         "artifacts/best.pt"
     ]
     
@@ -62,7 +65,8 @@ def load_damage_model():
     
     # Пути к модели повреждений
     damage_paths = [
-        "trained_models/best.pt",  # твоя модель повреждений
+        "trained_models/damage_best.pt",  # модель повреждений
+        "trained_models/best.pt",
         "damage_model/best.pt",
         "models/damage_best.pt"
     ]
@@ -74,6 +78,28 @@ def load_damage_model():
             return True
     
     print("❌ Damage модель не найдена!")
+    return False
+
+def load_scratch_model():
+    """Загружаем модель для детекции царапин"""
+    global scratch_model
+    
+    # Пути к модели царапин
+    scratch_paths = [
+        "trained_models/scratch_best.pt",  # модель царапин
+        "trained_models/scratch_model.pt",
+        "trained_models/scratch.pt",
+        "models/scratch_best.pt",
+        "scratch_model/best.pt"
+    ]
+    
+    for path in scratch_paths:
+        if os.path.exists(path):
+            print(f"🔥 Загружаем scratch модель: {path}")
+            scratch_model = YOLO(path)
+            return True
+    
+    print("❌ Scratch модель не найдена!")
     return False
 
 def predict_image(image_bytes):
@@ -108,8 +134,8 @@ def predict_image(image_bytes):
         "processing_time": processing_time
     }
 
-def predict_damage(image_bytes):
-    """Предсказание повреждений автомобиля"""
+def predict_damage_and_scratch(image_bytes):
+    """Предсказание повреждений и царапин автомобиля"""
     start_time = time.time()
     
     # Декодируем изображение
@@ -118,11 +144,6 @@ def predict_damage(image_bytes):
     
     if image is None:
         raise ValueError("Не удалось декодировать изображение")
-    
-    # Предсказание YOLO
-    if damage_model is None:
-        raise ValueError("Модель повреждений не загружена")
-    results = damage_model(image, verbose=False)
     
     # Классы повреждений
     damage_classes = {
@@ -137,37 +158,66 @@ def predict_damage(image_bytes):
         8: 'roof-dent'           # вмятина на крыше
     }
     
-    # Извлекаем все детекции
-    detections = []
-    if hasattr(results[0], 'boxes') and results[0].boxes is not None:
-        boxes = results[0].boxes
-        for i in range(len(boxes.cls)):
-            class_id = int(boxes.cls[i])
-            confidence = float(boxes.conf[i])
-            damage_type = damage_classes.get(class_id, f"unknown_{class_id}")
-            
-            detections.append({
-                "damage_type": damage_type,
-                "confidence": confidence,
-                "bbox": boxes.xyxy[i].tolist() if hasattr(boxes, 'xyxy') else None
-            })
+    # Результаты повреждений
+    damage_results = {"detections": [], "best_detection": None}
+    if damage_model is not None:
+        try:
+            damage_pred = damage_model(image, verbose=False)
+            if hasattr(damage_pred[0], 'boxes') and damage_pred[0].boxes is not None:
+                boxes = damage_pred[0].boxes
+                for i in range(len(boxes.cls)):
+                    class_id = int(boxes.cls[i])
+                    confidence = float(boxes.conf[i])
+                    damage_type = damage_classes.get(class_id, f"unknown_{class_id}")
+                    
+                    detection = {
+                        "type": damage_type,
+                        "confidence": confidence,
+                        "bbox": boxes.xyxy[i].tolist() if hasattr(boxes, 'xyxy') else None
+                    }
+                    damage_results["detections"].append(detection)
+                
+                if damage_results["detections"]:
+                    damage_results["best_detection"] = max(damage_results["detections"], key=lambda x: x['confidence'])
+        except Exception as e:
+            print(f"Ошибка damage модели: {e}")
     
-    # Берем самое уверенное повреждение
-    if detections:
-        best_detection = max(detections, key=lambda x: x['confidence'])
-        damage_type = best_detection['damage_type']
-        confidence = best_detection['confidence']
-    else:
-        damage_type = "no_damage"
-        confidence = 0.0
+    # Результаты царапин
+    scratch_results = {"detections": [], "best_detection": None}
+    if scratch_model is not None:
+        try:
+            scratch_pred = scratch_model(image, verbose=False)
+            if hasattr(scratch_pred[0], 'boxes') and scratch_pred[0].boxes is not None:
+                boxes = scratch_pred[0].boxes
+                for i in range(len(boxes.cls)):
+                    class_id = int(boxes.cls[i])
+                    confidence = float(boxes.conf[i])
+                    scratch_type = f"scratch_{class_id}"  # можешь добавить свои классы царапин
+                    
+                    detection = {
+                        "type": scratch_type,
+                        "confidence": confidence,
+                        "bbox": boxes.xyxy[i].tolist() if hasattr(boxes, 'xyxy') else None
+                    }
+                    scratch_results["detections"].append(detection)
+                
+                if scratch_results["detections"]:
+                    scratch_results["best_detection"] = max(scratch_results["detections"], key=lambda x: x['confidence'])
+        except Exception as e:
+            print(f"Ошибка scratch модели: {e}")
+    
+    # Объединяем все детекции
+    combined_detections = []
+    combined_detections.extend(damage_results["detections"])
+    combined_detections.extend(scratch_results["detections"])
     
     processing_time = (time.time() - start_time) * 1000
     
     return {
-        "damage_type": damage_type,
-        "confidence": confidence,
+        "damage_results": damage_results,
+        "scratch_results": scratch_results,
         "processing_time": processing_time,
-        "all_detections": detections
+        "combined_detections": combined_detections
     }
 
 # FastAPI приложение
@@ -190,22 +240,26 @@ async def startup():
     """Загружаем модели при запуске"""
     clean_dirty_loaded = load_model()
     damage_loaded = load_damage_model()
+    scratch_loaded = load_scratch_model()
     
     if not clean_dirty_loaded:
         print("⚠️ Clean/dirty модель не загружена")
     if not damage_loaded:
         print("⚠️ Damage модель не загружена")
+    if not scratch_loaded:
+        print("⚠️ Scratch модель не загружена")
     
-    if not clean_dirty_loaded and not damage_loaded:
+    if not clean_dirty_loaded and not damage_loaded and not scratch_loaded:
         raise Exception("Ни одна модель не загружена!")
 
 @app.get("/healthz", response_model=HealthResponse)
 async def health():
     """Проверка здоровья API"""
     return HealthResponse(
-        status="ok" if (model is not None or damage_model is not None) else "error",
+        status="ok" if (model is not None or damage_model is not None or scratch_model is not None) else "error",
         model_loaded=model is not None,
-        damage_model_loaded=damage_model is not None
+        damage_model_loaded=damage_model is not None,
+        scratch_model_loaded=scratch_model is not None
     )
 
 @app.post("/predict", response_model=PredictionResponse)
@@ -244,8 +298,8 @@ async def predict_car_damage(file: UploadFile = File(...)):
         # Читаем файл
         contents = await file.read()
         
-        # Предсказание повреждений
-        result = predict_damage(contents)
+        # Предсказание повреждений и царапин
+        result = predict_damage_and_scratch(contents)
         
         return DamageResponse(**result)
         
