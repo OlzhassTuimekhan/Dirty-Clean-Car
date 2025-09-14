@@ -1,6 +1,73 @@
-# DirtyCar - Binary Classification for Car Cleanliness Detection
+# 🚗 DirtyCar Classification Project
 
-A complete PyTorch-based solution for binary classification of car external condition: **clean** vs **dirty** with business rule optimization for high precision on the **clean** class.
+**Автоматическая классификация автомобилей на чистые и грязные** с использованием YOLOv8 и FastAPI.
+
+## 📊 Результаты
+- **Точность:** 99.7% на валидации
+- **Классы:** Clean (64,594 изображений) / Dirty (2,190 изображений)  
+- **Архитектура:** YOLOv8s-cls (5.08M параметров)
+- **Скорость:** ~200 FPS на RTX 3090
+
+## 🚀 Быстрый старт
+
+### 1. Обучение модели
+```bash
+python simple_train.py
+```
+- Автоматически найдет данные в `dataset/clean/` и `dataset/dirty/`
+- Обучит YOLOv8s на 50 эпох
+- Сохранит модель в `runs/classify/dirty_car_simple2/weights/best.pt`
+
+### 2. Запуск API сервера
+```bash
+# Автоматический запуск (рекомендуется)
+python setup_server.py
+
+# Или через bash
+bash start_server.sh
+
+# Или вручную
+pip install -r requirements_server.txt
+python simple_serve.py
+```
+
+### 3. Тестирование API
+```bash
+# Через curl
+curl -X POST -F 'file=@car.jpg' http://localhost:7439/predict
+
+# Через Python
+python test_api.py
+```
+
+## 🌐 API Endpoints
+
+### POST `/predict`
+Загрузка изображения для классификации
+```bash
+curl -X POST -F 'file=@car.jpg' http://localhost:7439/predict
+```
+
+**Ответ:**
+```json
+{
+  "label": "clean",
+  "confidence": 0.987,
+  "processing_time": 15.2
+}
+```
+
+### GET `/healthz`
+Проверка состояния сервера
+```bash
+curl http://localhost:7439/healthz
+```
+
+### GET `/docs`
+Интерактивная документация Swagger UI
+```
+http://localhost:7439/docs
+```
 
 ## Business Logic
 
